@@ -56,6 +56,21 @@ details.sec>summary small{display:block;font-weight:400;color:var(--muted);font-
 .hist div{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)}
 .dirty{color:var(--gold2);font-size:.8rem}
 .hidden{display:none!important}
+.top .wrap.tabs{display:flex;gap:6px;height:auto;justify-content:flex-start;padding-bottom:12px}
+.tab{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:8px 18px;font:inherit;font-size:.88rem;font-weight:600;cursor:pointer}
+.tab.on{background:var(--gold);color:#1a1205;border-color:var(--gold)}
+.post{display:grid;grid-template-columns:260px 1fr;gap:22px;background:var(--n2);border:1px solid var(--line);border-radius:14px;padding:18px;margin:16px 0}
+.post .pic img{width:100%;border-radius:10px;border:1px solid rgba(255,255,255,.08);display:block;background:var(--night)}
+.post .pic .btn{width:100%;justify-content:center;margin-top:10px}
+.post h3{font-size:1.05rem;margin-bottom:4px}
+.badge{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.06em;color:var(--gold2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;margin-bottom:6px}
+.cap{margin-top:14px}
+.cap-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.cap-head b{font-size:.85rem;color:var(--muted)}
+.cap textarea{min-height:150px;font-size:.88rem;white-space:pre-wrap}
+.post-tools{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+select{width:100%;background:var(--night);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font:inherit}
+@media(max-width:700px){.post{grid-template-columns:1fr}.post .pic{max-width:320px;margin:0 auto;width:100%}}
 @media(max-width:560px){.top h1{font-size:1rem}.top small{display:none}.btn{padding:10px 14px}}
 </style>
 </head>
@@ -77,14 +92,23 @@ details.sec>summary small{display:block;font-weight:400;color:var(--muted);font-
 
 <div id="editorView" class="hidden">
   <div class="top"><div class="wrap">
-    <div><h1>Editar site</h1><small id="who"></small></div>
+    <div><h1>Admin</h1><small id="who"></small></div>
     <div class="actions">
       <span class="dirty hidden" id="dirty">alterações não salvas</span>
       <a class="btn btn-ghost btn-sm" href="/" target="_blank" rel="noopener">Ver site</a>
       <button class="btn btn-gold" id="saveBtn">Salvar</button>
     </div>
-  </div></div>
-  <div class="wrap">
+  </div>
+  <div class="wrap tabs"><button class="tab on" data-tab="site">Editar site</button><button class="tab" data-tab="posts">Postagens</button></div>
+  </div>
+  <div class="wrap hidden" id="postsTab">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin:22px 0 6px;flex-wrap:wrap">
+      <p class="hint" style="margin:0;max-width:520px">Imagens prontas para postar. Baixe a imagem e copie o texto do WhatsApp ou do Instagram.</p>
+      <button class="btn btn-gold btn-sm" id="newPost">+ Nova postagem</button>
+    </div>
+    <div id="postsList"></div>
+  </div>
+  <div class="wrap" id="siteTab">
     <p class="hint" style="margin-top:16px">Abra uma seção, altere o que quiser e clique em <b>Salvar</b>. O site muda na hora (pode ser preciso recarregar a página do site).</p>
     <div id="editor"></div>
     <details class="sec"><summary><span>Versões anteriores<small>Desfazer: volte para como o site estava antes de um salvamento</small></span></summary><div class="sec-body hist" id="history"></div></details>
@@ -265,6 +289,106 @@ $("#loginForm").addEventListener("submit", async e=>{
   m.className="msg ok"; m.textContent="Pronto! Abra o seu e-mail e clique no link de acesso (veja também o spam).";
 });
 $("#saveBtn").addEventListener("click", save);
+
+/* ---------- Postagens ---------- */
+let posts = [];
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === t));
+  const isPosts = t.dataset.tab === "posts";
+  $("#postsTab").classList.toggle("hidden", !isPosts);
+  $("#siteTab").classList.toggle("hidden", isPosts);
+  $("#saveBtn").classList.toggle("hidden", isPosts);
+  $("#dirty").classList.toggle("hidden", isPosts || !dirty);
+  if (isPosts && !posts.length) loadPosts();
+}));
+
+async function loadPosts(){
+  $("#postsList").innerHTML = '<p class="hint" style="margin:20px 0">Carregando postagens…</p>';
+  const { data, error } = await sb.from("posts").select("*").order("position", { ascending: true }).order("created_at", { ascending: false });
+  if (error) { $("#postsList").innerHTML = ""; return toast("Não consegui carregar as postagens: " + error.message, true); }
+  posts = data || []; renderPosts();
+}
+const fileName = p => (p.title || "postagem").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/gi, "-").toLowerCase() + "-" + (p.format || "").split(" ")[0].toLowerCase() + ".jpg";
+const downloadHref = p => p.image.startsWith("/") ? p.image : p.image + (p.image.includes("?") ? "&" : "?") + "download=" + encodeURIComponent(fileName(p));
+
+async function copyText(text, label){
+  try { await navigator.clipboard.writeText(text); toast(`Texto do ${label} copiado!`); }
+  catch (e) { toast("Não consegui copiar automaticamente. Selecione o texto e copie.", true); }
+}
+
+function captionBox(label, value, editing, onInput){
+  const ta = el("textarea", { value, readOnly: !editing, on: { input: e => onInput(e.target.value) } });
+  return el("div", { className: "cap" },
+    el("div", { className: "cap-head" }, el("b", {}, label), el("button", { type: "button", className: "btn btn-ghost btn-sm", on: { click: () => copyText(ta.value, label) } }, "Copiar texto")),
+    ta);
+}
+
+function renderPosts(){
+  const list = $("#postsList"); list.innerHTML = "";
+  if (!posts.length) { list.append(el("p", { className: "hint", style: "margin:20px 0" }, "Nenhuma postagem ainda. Clique em “+ Nova postagem”.")); return; }
+  posts.forEach(p => list.append(postCard(p)));
+}
+
+function postCard(p){
+  const editing = !!p._editing, draft = p._draft || (p._draft = { ...p });
+  const img = el("img", { src: draft.image || "", alt: draft.title });
+  const pic = el("div", { className: "pic" }, img);
+  if (!editing) {
+    pic.append(el("a", { className: "btn btn-gold btn-sm", href: downloadHref(p), download: fileName(p) }, "Baixar imagem"));
+  } else {
+    const file = el("input", { type: "file", accept: "image/jpeg,image/png,image/webp", className: "hidden", on: { change: async () => {
+      const f = file.files[0]; if (!f) return;
+      if (f.size > 5 * 1024 * 1024) return toast("Imagem muito grande (máx. 5 MB).", true);
+      toast("Enviando imagem…");
+      const ext = (f.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `posts/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await sb.storage.from("imagens").upload(path, f, { contentType: f.type });
+      if (error) return toast("Não consegui enviar a imagem: " + error.message, true);
+      draft.image = sb.storage.from("imagens").getPublicUrl(path).data.publicUrl; img.src = draft.image; toast("Imagem enviada. Clique em “Salvar postagem”.");
+    } } });
+    pic.append(file, el("button", { type: "button", className: "btn btn-ghost btn-sm", on: { click: () => file.click() } }, draft.image ? "Trocar imagem" : "Escolher imagem"));
+  }
+  const body = el("div");
+  if (editing) {
+    body.append(el("label", {}, "Título (ex.: nome do livro)"), el("input", { type: "text", value: draft.title, on: { input: e => draft.title = e.target.value } }));
+    const sel = el("select", { on: { change: e => draft.format = e.target.value } }, ...["Status / Stories", "Feed do Instagram", "Outro"].map(o => el("option", { value: o, selected: o === draft.format }, o)));
+    body.append(el("label", {}, "Formato"), sel);
+  } else {
+    body.append(el("span", { className: "badge" }, p.format), el("h3", {}, p.title));
+  }
+  body.append(captionBox("WhatsApp", draft.whatsapp, editing, v => draft.whatsapp = v));
+  body.append(captionBox("Instagram", draft.instagram, editing, v => draft.instagram = v));
+  const tools = el("div", { className: "post-tools" });
+  if (editing) {
+    tools.append(
+      el("button", { type: "button", className: "btn btn-gold btn-sm", on: { click: () => savePost(p) } }, "Salvar postagem"),
+      el("button", { type: "button", className: "btn btn-ghost btn-sm", on: { click: () => { if (!p.id) { posts = posts.filter(x => x !== p); } else { delete p._editing; delete p._draft; } renderPosts(); } } }, "Cancelar"));
+    if (p.id) tools.append(el("button", { type: "button", className: "btn btn-danger btn-sm", on: { click: () => deletePost(p) } }, "Apagar"));
+  } else {
+    tools.append(el("button", { type: "button", className: "btn btn-ghost btn-sm", on: { click: () => { p._editing = true; p._draft = { ...p }; renderPosts(); } } }, "Editar"));
+  }
+  body.append(tools);
+  return el("div", { className: "post" }, pic, body);
+}
+
+async function savePost(p){
+  const d = p._draft;
+  if (!d.image) return toast("Escolha uma imagem antes de salvar.", true);
+  const row = { title: d.title, format: d.format, image: d.image, whatsapp: d.whatsapp, instagram: d.instagram, position: d.position ?? 0 };
+  const res = p.id ? await sb.from("posts").update(row).eq("id", p.id).select().single() : await sb.from("posts").insert(row).select().single();
+  if (res.error) return toast("Não foi possível salvar: " + res.error.message, true);
+  const i = posts.indexOf(p); posts[i] = res.data; renderPosts(); toast("Postagem salva!");
+}
+async function deletePost(p){
+  if (!confirmRemove(p.title || "esta postagem")) return;
+  const { error } = await sb.from("posts").delete().eq("id", p.id);
+  if (error) return toast("Não foi possível apagar: " + error.message, true);
+  posts = posts.filter(x => x !== p); renderPosts(); toast("Postagem apagada.");
+}
+$("#newPost").addEventListener("click", () => {
+  const p = { title: "", format: "Status / Stories", image: "", whatsapp: "", instagram: "", position: 0, _editing: true };
+  p._draft = { ...p }; posts.unshift(p); renderPosts(); window.scrollTo({ top: 0, behavior: "smooth" });
+});
 $("#logout").addEventListener("click", async()=>{ if(dirty && !confirmRemove("as alterações não salvas")) return; dirty=false; await sb.auth.signOut(); location.reload(); });
 
 const {data:{session}}=await sb.auth.getSession();
