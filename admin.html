@@ -333,7 +333,10 @@ function postCard(p){
   const editing = !!p._editing, draft = p._draft || (p._draft = { ...p });
   const img = el("img", { src: draft.image || "", alt: draft.title });
   const pic = el("div", { className: "pic" }, img);
-  if (!editing) {
+  if (!editing && !p.image) {
+    img.replaceWith(el("div", { style: "aspect-ratio:9/16;border:2px dashed var(--line);border-radius:10px;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:.85rem;padding:16px" }, "Falta a imagem. Baixe a arte no ChatGPT e suba aqui."));
+    pic.append(el("button", { type: "button", className: "btn btn-gold btn-sm", on: { click: () => { p._editing = true; p._draft = { ...p }; renderPosts(); } } }, "Subir imagem"));
+  } else if (!editing) {
     pic.append(el("a", { className: "btn btn-gold btn-sm", href: downloadHref(p), download: fileName(p) }, "Baixar imagem"));
   } else {
     const file = el("input", { type: "file", accept: "image/jpeg,image/png,image/webp", className: "hidden", on: { change: async () => {
