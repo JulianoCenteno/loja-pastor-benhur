@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Admin — Loja Pr. Ben-Hur</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--night:#0b0f1a;--n2:#121829;--n3:#1a2238;--gold:#e3b34c;--gold2:#f5d27a;--ink:#f3ecdc;--muted:#a9a293;--line:rgba(227,179,76,.22);--ok:#3ccf7f;--bad:#f07a7a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:var(--night);color:var(--ink);line-height:1.5;min-height:100vh}
+a{color:var(--gold2)}
+.wrap{max-width:860px;margin:0 auto;padding:0 18px}
+h1{font-family:Cinzel,serif;font-size:1.25rem}
+.top{position:sticky;top:0;z-index:20;background:rgba(11,15,26,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;height:64px}
+.top small{display:block;color:var(--muted);font-size:.75rem}
+.actions{display:flex;gap:8px;align-items:center}
+.btn{border:0;border-radius:999px;padding:11px 20px;font:inherit;font-weight:600;font-size:.92rem;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-gold{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1a1205}
+.btn-gold:disabled{opacity:.5;cursor:default}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn-sm{padding:7px 12px;font-size:.8rem}
+.btn-danger{background:transparent;color:var(--bad);border:1px solid rgba(240,122,122,.35)}
+.card{background:var(--n2);border:1px solid var(--line);border-radius:14px;padding:22px;margin:18px 0}
+.login{max-width:420px;margin:12vh auto;text-align:center}
+.login p{color:var(--muted);margin:8px 0 22px}
+label{display:block;font-size:.82rem;color:var(--muted);margin:14px 0 6px;font-weight:500}
+input[type=text],input[type=email],input[type=url],input[type=number],textarea{width:100%;background:var(--night);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font:inherit;font-size:.95rem}
+textarea{min-height:90px;resize:vertical}
+input:focus,textarea:focus{outline:none;border-color:var(--gold)}
+.msg{margin-top:14px;font-size:.9rem;min-height:1.3em}
+.msg.ok{color:var(--ok)}.msg.bad{color:var(--bad)}
+details.sec{background:var(--n2);border:1px solid var(--line);border-radius:14px;margin:14px 0;overflow:hidden}
+details.sec>summary{cursor:pointer;list-style:none;padding:18px 22px;font-weight:600;font-size:1.02rem;display:flex;justify-content:space-between;align-items:center}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary::after{content:"+";color:var(--gold);font-size:1.4rem}
+details.sec[open]>summary::after{content:"–"}
+details.sec>summary small{display:block;font-weight:400;color:var(--muted);font-size:.8rem}
+.sec-body{padding:0 22px 22px}
+.item{border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 16px;margin:12px 0;background:rgba(0,0,0,.18)}
+.item-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.item-head b{font-size:.95rem}
+.item-tools{display:flex;gap:6px;flex-wrap:wrap}
+.list-row{display:flex;gap:6px;margin-bottom:6px}
+.list-row input,.list-row textarea{flex:1}
+.img-field{display:flex;gap:14px;align-items:center}
+.img-field img{width:80px;height:100px;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--night)}
+.check{display:flex;gap:8px;align-items:center;margin-top:14px;font-size:.92rem}
+.hint{font-size:.78rem;color:var(--muted);margin-top:4px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,30px);background:var(--ink);color:#1a1205;padding:12px 20px;border-radius:999px;font-weight:600;opacity:0;transition:all .3s;z-index:50;pointer-events:none;max-width:90vw;text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.toast.bad{background:var(--bad)}
+.hist{font-size:.88rem}
+.hist div{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.dirty{color:var(--gold2);font-size:.8rem}
+.hidden{display:none!important}
+@media(max-width:560px){.top h1{font-size:1rem}.top small{display:none}.btn{padding:10px 14px}}
+</style>
+</head>
+<body>
+
+<div id="loginView" class="wrap hidden">
+  <div class="card login">
+    <h1>Área do autor</h1>
+    <p>Entre com o seu e-mail. Vamos enviar um link de acesso, sem senha.</p>
+    <form id="loginForm">
+      <input type="email" id="email" placeholder="seu@email.com" required autocomplete="email">
+      <button class="btn btn-gold" style="width:100%;justify-content:center;margin-top:12px" id="loginBtn">Enviar link de acesso</button>
+    </form>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<div id="loadingView" class="wrap"><div class="card login"><p>Carregando…</p></div></div>
+
+<div id="editorView" class="hidden">
+  <div class="top"><div class="wrap">
+    <div><h1>Editar site</h1><small id="who"></small></div>
+    <div class="actions">
+      <span class="dirty hidden" id="dirty">alterações não salvas</span>
+      <a class="btn btn-ghost btn-sm" href="/" target="_blank" rel="noopener">Ver site</a>
+      <button class="btn btn-gold" id="saveBtn">Salvar</button>
+    </div>
+  </div></div>
+  <div class="wrap">
+    <p class="hint" style="margin-top:16px">Abra uma seção, altere o que quiser e clique em <b>Salvar</b>. O site muda na hora (pode ser preciso recarregar a página do site).</p>
+    <div id="editor"></div>
+    <details class="sec"><summary><span>Versões anteriores<small>Desfazer: volte para como o site estava antes de um salvamento</small></span></summary><div class="sec-body hist" id="history"></div></details>
+    <p style="text-align:center;margin:28px 0 60px"><button class="btn btn-ghost btn-sm" id="logout">Sair</button></p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/content-default.js"></script>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+const sb = createClient(SITE_CONFIG.supabaseUrl, SITE_CONFIG.supabaseKey);
+const $ = s => document.querySelector(s);
+const show = id => ["loginView","loadingView","editorView"].forEach(v => $("#"+v).classList.toggle("hidden", v!==id));
+let tt; const toast = (t, bad) => { const el=$("#toast"); el.textContent=t; el.classList.toggle("bad",!!bad); el.classList.add("on"); clearTimeout(tt); tt=setTimeout(()=>el.classList.remove("on"),3200); };
+
+/* ---------- O que pode ser editado ---------- */
+const BOOK_FIELDS = [
+  ["title","Título do livro","text"], ["sub","Subtítulo","text"],
+  ["vol","Volume (ex.: Volume 4)","text"], ["tag","Etiqueta na capa (ex.: Lançamento). Deixe vazio para não mostrar","text"],
+  ["price","Preço (R$)","money"], ["pages","Número de páginas","number"],
+  ["checkout","Link do checkout (Digital Hub)","url"], ["img","Capa do livro","image"],
+  ["desc","Resumo curto (aparece no card)","textarea"], ["syn","Sinopse completa (aparece em “Ver detalhes”)","textarea"],
+  ["toc","Capítulos / o que o leitor vai encontrar","list"]
+];
+const SECTIONS = [
+  { key:"books", label:"Livros", hint:"Preços, links de compra, capas, textos. Adicione livros novos aqui.", type:"objects", itemLabel:b=>b.title||"Novo livro", fields:BOOK_FIELDS,
+    blank:()=>({vol:"",tag:"Lançamento",title:"Novo livro",sub:"",price:14.90,pages:"",checkout:"https://",img:"",desc:"",syn:"",toc:[]}) },
+  { key:"combo", label:"Coleção completa", hint:"Preço e link do pacote com todos os livros", fields:[
+    ["show","Mostrar a coleção no site","check"], ["eyebrow","Texto pequeno acima","text"], ["title","Título","text"], ["text","Descrição","textarea"],
+    ["price","Preço da coleção (R$)","money"], ["checkout","Link do checkout da coleção","url"], ["button","Texto do botão","text"] ]},
+  { key:"hero", label:"Topo do site", hint:"Título principal e frase de abertura", fields:[
+    ["eyebrow","Texto pequeno acima do título","text"], ["title","Título (começo)","text"], ["highlight","Palavra em dourado","text"], ["title_end","Título (final)","text"],
+    ["lead","Frase abaixo do título","textarea"], ["button_main","Botão principal","text"], ["button_second","Botão secundário","text"], ["badges","Selos abaixo dos botões","list"] ]},
+  { key:"collection", label:"Seção “Os livros”", hint:"Título e texto acima da lista de livros", fields:[
+    ["eyebrow","Texto pequeno","text"], ["title","Título","text"], ["lead","Texto","textarea"] ]},
+  { key:"quote", label:"Frase de destaque", hint:"A citação grande no meio da página", fields:[
+    ["text","Frase","textarea"], ["cite","Fonte (abaixo da frase)","text"] ]},
+  { key:"howto", label:"Como comprar", hint:"Os passos da compra", fields:[
+    ["eyebrow","Texto pequeno","text"], ["title","Título","text"], ["lead","Texto","textarea"],
+    ["steps","Passos","objects",{itemLabel:s=>s.title||"Passo", fields:[["title","Título do passo","text"],["text","Explicação","textarea"]], blank:()=>({title:"",text:""})}] ]},
+  { key:"author", label:"Sobre o autor", hint:"Foto, biografia e formação", fields:[
+    ["eyebrow","Texto pequeno","text"], ["name","Nome","text"], ["photo","Foto","image"],
+    ["paragraphs","Biografia (um parágrafo por caixa)","list-long"], ["creds","Formação / títulos","list"] ]},
+  { key:"faq", label:"Perguntas frequentes", hint:"Dúvidas e respostas", fields:[
+    ["eyebrow","Texto pequeno","text"], ["title","Título","text"],
+    ["items","Perguntas","objects",{itemLabel:f=>f.q||"Nova pergunta", fields:[["q","Pergunta","text"],["a","Resposta","textarea"]], blank:()=>({q:"",a:""})}] ]},
+  { key:"brand", label:"Nome no topo", hint:"Nome e frase do cabeçalho", fields:[
+    ["name","Nome","text"], ["tagline","Frase abaixo do nome","text"] ]},
+  { key:"footer", label:"Rodapé e contatos", hint:"E-mail, WhatsApp e versículo", fields:[
+    ["email","E-mail de suporte","text"], ["whatsapp","WhatsApp","text"], ["verse","Versículo do rodapé","text"] ]}
+];
+
+let state = null, dirty = false;
+const markDirty = () => { dirty = true; $("#dirty").classList.remove("hidden"); };
+window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+const el = (tag, attrs={}, ...kids) => { const e=document.createElement(tag); for (const [k,v] of Object.entries(attrs)) { if (k==="on") for (const [ev,fn] of Object.entries(v)) e.addEventListener(ev,fn); else if (k in e && k!=="list") e[k]=v; else e.setAttribute(k,v);} kids.flat().forEach(k=>e.append(k)); return e; };
+
+function fieldInput(obj, [k, label, type, opt], rerender){
+  const box = el("div");
+  if (type === "check") {
+    const cb = el("input",{type:"checkbox",checked:obj[k]!==false,on:{change:()=>{obj[k]=cb.checked;markDirty();}}});
+    box.append(el("label",{className:"check"},cb,label)); return box;
+  }
+  box.append(el("label",{},label));
+  if (type === "text" || type === "url") {
+    box.append(el("input",{type:type==="url"?"url":"text",value:obj[k]??"",on:{input:e=>{obj[k]=e.target.value;markDirty();}}}));
+  } else if (type === "textarea") {
+    box.append(el("textarea",{value:obj[k]??"",on:{input:e=>{obj[k]=e.target.value;markDirty();}}}));
+  } else if (type === "money" || type === "number") {
+    const inp = el("input",{type:"text",inputMode:"decimal",value: obj[k]===""||obj[k]==null ? "" : (type==="money"?Number(obj[k]).toFixed(2).replace(".",","):obj[k]),
+      on:{input:e=>{const v=e.target.value.replace(/\./g,"").replace(",",".").trim(); obj[k]= v===""?"":Number(v); markDirty();}}});
+    box.append(inp);
+    if (type==="money") box.append(el("div",{className:"hint"},"Use vírgula: 14,90. Lembre de mudar o preço também na Digital Hub."));
+  } else if (type === "image") {
+    const img = el("img",{src:obj[k]||"",alt:""});
+    const file = el("input",{type:"file",accept:"image/jpeg,image/png,image/webp",className:"hidden",on:{change:async()=>{
+      const f=file.files[0]; if(!f) return;
+      if (f.size>5*1024*1024) return toast("Imagem muito grande (máx. 5 MB).",true);
+      toast("Enviando imagem…");
+      const ext=(f.name.split(".").pop()||"jpg").toLowerCase();
+      const path=`${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+      const {error}=await sb.storage.from("imagens").upload(path,f,{contentType:f.type,upsert:false});
+      if(error) return toast("Não consegui enviar a imagem: "+error.message,true);
+      obj[k]=sb.storage.from("imagens").getPublicUrl(path).data.publicUrl; img.src=obj[k]; markDirty(); toast("Imagem enviada. Clique em Salvar.");
+    }}});
+    box.append(el("div",{className:"img-field"},img,el("div",{},el("button",{type:"button",className:"btn btn-ghost btn-sm",on:{click:()=>file.click()}},"Trocar imagem"),file,el("div",{className:"hint"},"JPG, PNG ou WEBP até 5 MB"))));
+  } else if (type === "list" || type === "list-long") {
+    if (!Array.isArray(obj[k])) obj[k]=[];
+    const arr=obj[k], wrap=el("div");
+    arr.forEach((v,i)=>{
+      const inp = type==="list-long" ? el("textarea",{value:v,on:{input:e=>{arr[i]=e.target.value;markDirty();}}}) : el("input",{type:"text",value:v,on:{input:e=>{arr[i]=e.target.value;markDirty();}}});
+      wrap.append(el("div",{className:"list-row"},inp,el("button",{type:"button",className:"btn btn-danger btn-sm",title:"Remover",on:{click:()=>{arr.splice(i,1);markDirty();rerender();}}},"✕")));
+    });
+    wrap.append(el("button",{type:"button",className:"btn btn-ghost btn-sm",on:{click:()=>{arr.push("");markDirty();rerender();}}},"+ Adicionar"));
+    box.append(wrap);
+  } else if (type === "objects") {
+    box.append(objectsEditor(obj, k, opt, rerender));
+  }
+  return box;
+}
+
+function objectsEditor(parent, k, def, rerender){
+  if (!Array.isArray(parent[k])) parent[k]=[];
+  const arr=parent[k], wrap=el("div");
+  arr.forEach((item,i)=>{
+    const body=el("div");
+    def.fields.forEach(f=>body.append(fieldInput(item,f,rerender)));
+    const tools=el("div",{className:"item-tools"},
+      el("button",{type:"button",className:"btn btn-ghost btn-sm",disabled:i===0,title:"Subir",on:{click:()=>{[arr[i-1],arr[i]]=[arr[i],arr[i-1]];markDirty();rerender();}}},"↑"),
+      el("button",{type:"button",className:"btn btn-ghost btn-sm",disabled:i===arr.length-1,title:"Descer",on:{click:()=>{[arr[i+1],arr[i]]=[arr[i],arr[i+1]];markDirty();rerender();}}},"↓"),
+      el("button",{type:"button",className:"btn btn-danger btn-sm",on:{click:()=>{ if(!confirmRemove(def.itemLabel(item))) return; arr.splice(i,1);markDirty();rerender();}}},"Remover"));
+    tools.addEventListener("click", e => e.preventDefault()); // botões não abrem/fecham o item
+    const d=el("details",{className:"item"},el("summary",{className:"item-head"},el("b",{},def.itemLabel(item)),tools),body);
+    d.querySelector("summary").style.listStyle="none"; d.querySelector("summary").style.cursor="pointer";
+    wrap.append(d);
+  });
+  wrap.append(el("button",{type:"button",className:"btn btn-ghost btn-sm",on:{click:()=>{arr.push(def.blank());markDirty();rerender(arr.length-1);}}},"+ Adicionar"));
+  return wrap;
+}
+let pendingRemove=null;
+function confirmRemove(name){ // confirmação sem pop-up do navegador: clique duas vezes
+  if (pendingRemove===name) { pendingRemove=null; return true; }
+  pendingRemove=name; toast(`Clique em “Remover” de novo para apagar “${name}”.`); setTimeout(()=>{pendingRemove=null;},4000); return false;
+}
+
+function renderEditor(){
+  const ed=$("#editor"), open=[...ed.querySelectorAll("details.sec")].map(d=>d.open);
+  const openItems=[...ed.querySelectorAll("details.item")].map(d=>d.open);
+  ed.innerHTML="";
+  SECTIONS.forEach((s,si)=>{
+    if (!state[s.key]) state[s.key] = s.type==="objects" ? [] : {};
+    const body=el("div",{className:"sec-body"});
+    const rer=()=>renderEditor();
+    if (s.type==="objects") body.append(objectsEditor(state, s.key, s, rer));
+    else s.fields.forEach(f=>body.append(fieldInput(state[s.key], f, rer)));
+    ed.append(el("details",{className:"sec",open:open[si]??false},el("summary",{},el("span",{},s.label,el("small",{},s.hint))),body));
+  });
+  [...ed.querySelectorAll("details.item")].forEach((d,i)=>{ if(openItems[i]) d.open=true; });
+}
+
+async function loadHistory(){
+  const {data}=await sb.from("site_content_history").select("id,saved_at,saved_by,data").eq("content_id","main").order("saved_at",{ascending:false}).limit(15);
+  const h=$("#history"); h.innerHTML="";
+  if(!data||!data.length){ h.append(el("p",{className:"hint"},"Ainda não há versões anteriores. Elas aparecem aqui depois de cada salvamento.")); return; }
+  data.forEach(v=>h.append(el("div",{},el("span",{},new Date(v.saved_at).toLocaleString("pt-BR")+(v.saved_by?` · ${v.saved_by}`:"")),
+    el("button",{type:"button",className:"btn btn-ghost btn-sm",on:{click:()=>{state=structuredClone(v.data);renderEditor();markDirty();toast("Versão carregada. Confira e clique em Salvar para publicar.");}}},"Usar esta versão"))));
+}
+
+async function save(){
+  const b=$("#saveBtn"); b.disabled=true; b.textContent="Salvando…";
+  const {error}=await sb.from("site_content").upsert({id:"main",data:state});
+  b.disabled=false; b.textContent="Salvar";
+  if(error) return toast("Não foi possível salvar: "+error.message,true);
+  dirty=false; $("#dirty").classList.add("hidden"); toast("Salvo! O site já foi atualizado."); loadHistory();
+}
+
+async function enter(session){
+  show("loadingView");
+  const {data:isAdmin}=await sb.rpc("is_admin");
+  if(!isAdmin){ await sb.auth.signOut(); show("loginView"); $("#loginMsg").className="msg bad"; $("#loginMsg").textContent="Este e-mail não tem acesso ao admin."; return; }
+  $("#who").textContent=session.user.email;
+  const {data}=await sb.from("site_content").select("data").eq("id","main").maybeSingle();
+  state = data?.data ? data.data : structuredClone(window.DEFAULT_CONTENT);
+  renderEditor(); loadHistory(); show("editorView");
+}
+
+$("#loginForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const email=$("#email").value.trim(), m=$("#loginMsg"), b=$("#loginBtn");
+  m.className="msg"; m.textContent=""; b.disabled=true;
+  const {data:ok}=await sb.rpc("is_admin_email",{check_email:email});
+  if(!ok){ b.disabled=false; m.className="msg bad"; m.textContent="Este e-mail não tem acesso ao admin."; return; }
+  const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+"/admin"}});
+  b.disabled=false;
+  if(error){ m.className="msg bad"; m.textContent="Não consegui enviar: "+error.message; return; }
+  m.className="msg ok"; m.textContent="Pronto! Abra o seu e-mail e clique no link de acesso (veja também o spam).";
+});
+$("#saveBtn").addEventListener("click", save);
+$("#logout").addEventListener("click", async()=>{ if(dirty && !confirmRemove("as alterações não salvas")) return; dirty=false; await sb.auth.signOut(); location.reload(); });
+
+const {data:{session}}=await sb.auth.getSession();
+if(session) enter(session); else show("loginView");
+sb.auth.onAuthStateChange((ev,s)=>{ if(ev==="SIGNED_IN" && s && $("#editorView").classList.contains("hidden")) enter(s); });
+</script>
+</body>
+</html>
